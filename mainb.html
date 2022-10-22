@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejercicio Dashboard</title>
+    <script src="https://api.cloudmqtt.com/js/mqttws31.js" type="text/javascript"></script>
+    <script src="justgage.js"></script>
+    <script src="raphael-2.1.4.min.js"></script>
+    <!-- https://api.cloudmqtt.com/js/mqttws31.js -->
+</head>
+
+
+<style type="text/css"> /* Empieza la definicion de estilos */
+    .a200x160px {
+        width: 200px;
+        height: 160px;
+    }
+
+    img {
+        margin-left: 75px;
+    }
+
+ 
+</style> <!-- Termina la definicion de estilos -->
+
+
+<body>
+    <div>
+        <h2>Suscripciones:</h2>
+    </div>
+    <div>
+        <a>Temperatura:</a>
+        <a id = "temperatura">27.5</a>
+    </div>
+    <div id="gauge" class="a200x160px"> <!-- Divs para los elementos animados  --> 
+        <script>
+            var g = new JustGage({
+              id: "gauge",
+              value: 27.5,
+              min: 0,
+              max: 60,
+              title: "Temperatura"
+            });
+          </script>
+
+    </div>
+    <div>
+        <a>Pulsador:</a>
+        <a id = "pulsador">No presionado</a>
+    </div>
+    <div>
+        <img id="imgPulsador" src="./imagenes/noPresionado.png">
+    </div>
+    <div>
+        <a>Salida Digital:</a>
+        <a id = "salidaDigital">-</a>
+    </div>
+
+
+    
+    
+    <div>
+        <a>Salida Analógica:</a>
+        <a id = "salidaAnalogica">-</a>
+    </div>
+    <div>
+        <a>Publicaciones:</a>
+        <a id = "salidaAnalogica">-</a>
+    </div>
+    <div>
+        <h2>Publicaciones:</h2>
+    </div>
+    <div>
+        <h2>Salida Digital:</h2>
+        <button type="button" onclick='OnOFF("ON")'>ON</button>
+        <button type="button" onclick='OnOFF("OFF")'>OFF</button>
+    </div>
+
+    <div>   <!-- Código imagen vectorial LED Apagado -->
+        <?xml version="1.0"?><svg width="100" height="75" viewBox="0 0 640 480" >
+            <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+            <defs>
+             <linearGradient id="svg_6" x1="0" y1="0" x2="1" y2="0">
+              <stop stop-color="#bfbfbf" offset="0"/>
+              <stop stop-color="#404040" offset="1"/>
+             </linearGradient>
+             <linearGradient id="svg_11" x1="0" y1="0" x2="1" y2="1" spreadMethod="pad">
+              <stop id ="led1" stop-color="#000000" stop-opacity="0.992188" offset="0"/>  <!-- color rojo original = #dd0000. Al sustituir las letras dd por 00 se obtiene el tono mas oscuro posible -->
+              <stop stop-color="#820101" stop-opacity="0.988281" offset="1"/>
+             </linearGradient>
+             <linearGradient id="svg_14" x1="0" y1="0" x2="1" y2="1" spreadMethod="pad">
+              <stop stop-color="#ffffff" stop-opacity="0.996094" offset="0"/>
+              <stop stop-color="#d30606" stop-opacity="0.984375" offset="0.703125"/>
+             </linearGradient>
+            </defs>
+            <g>
+             <title>Layer 1</title>
+             <circle fill="url(#svg_6)" stroke-width="17.5" stroke-linecap="round" cx="320" cy="240" r="196.125" id="svg_3" fill-opacity="0.77" transform="rotate(90, 320, 240)"/>
+             <circle fill="url(#svg_6)" stroke-width="17.5" stroke-linecap="round" fill-opacity="0.64" cx="319.252837" cy="239.999045" r="160" id="svg_7"/>
+             <circle fill="url(#svg_11)" stroke-width="17.5" stroke-linecap="round" cx="320.000535" cy="240.001698" r="150" id="svg_8"/>
+             <ellipse fill="url(#svg_14)" stroke-width="17.5" stroke-linecap="round" cx="250.179609" cy="170.124194" rx="75.675959" ry="44.402987" id="svg_20" transform="rotate(-47.7626, 250.18, 170.125)"/>
+            </g>
+           </svg>
+
+
+    </div>
+    <div>
+        <h2>Salida Analógica</h2>
+        <input type="range" id="myRange" min="0" max="1023" onmouseup="enviarSalidaAnalogica()">
+    </div>
+
+    
+    <script>
+        usuario = 'placa1';
+        contrasena = '12345678';
+
+        function OnOff(dato) {
+            message = new Paho.Message(dato);
+            message.destinationName = '/' + usuario + '/salidaDigital'  /*Este es el topic*/
+            client.send(message);
+            
+        }
+
+        function enviarSalidaAnalogica() {
+            var dato = document.getElementById("myRange").value;
+            message = new Paho.Message(dato);
+            message.destinationName = '/' + usuario + '/salidaAnalogica'  /*Este es el topic*/
+            client.send(message);
+        }
+
+        //called when the client connects
+        function onConnect() {
+            //Once a connection has been made, make a subscription and send a message.
+            console.log("onConnect");
+            client.subscribe("#");
+        }
+
+        //called when the client looses its connection
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("onConnectionLost:", responseObject.errorMessage);
+                setTimeout(function(){client.connect()}, 5000);
+            }
+            
+        }
+
+        //called when a message arrives
+        function onMessageArrived(message) {
+            if (message.destinationName == '/' + usuario + 'temperatura') {
+                //document.getElementById("temperatura").textContent = message.payloadString + " *C";
+                g.refresh(message.payloadString); //Funcion para actualizar valor enviado por MQTT
+
+            }
+            if (message.destinationName == '/' + usuario + "pulsador") {
+                document.getElementById("pulsador").textContent = message.payloadString;
+                if (message.payloadString == "presionado") {
+                    document.getElementById("imgPulsador").src = "./imagenes/presionado.png"
+                                       
+                }else if (message.payloadString == "No presionado"){
+                    document.getElementById("imgPulsador").src = "./imagenes/noPresionado.png"} //Funcion para actualizar valor enviado por MQTT
+
+           }
+            if (message.destinationName == '/' + usuario + "salidaDigital") {
+                document.getElementById("salidaDigital").textContent = message.payloadString;
+                estadoDigital = message.payloadString; //Funcion para actualizar valor enviado por MQTT
+                
+                if (estadoDigital == 'OFF') {
+                    document.getElementById("led1").setAttribute("stop-color", #110000 ) //Intensidad tenue para mostrar apagado
+                }else if (estadoDigital = "ON") {
+                    document.getElementById("led1").setAttribute("stop-color", #ff30ff ) //Intensidad mayor para mostar encendido
+                    
+                }
+            }
+            if (message.destinationName == '/' + usuario + "salidaAnalogica") {
+                document.getElementById("saldaAnalogica").textContent = message.payloadString;
+            }
+        }
+
+        function onFailure(invocationContent, errorCode, errorMessage) {
+            var errDiv = document.getElementById("error");
+            errDiv.textContent = "Could not connect to the websochet server, most likely you're behind a firewall that doesn't allow outgoing connections to port 39627";
+            errDiv.style.display = "block";
+        }
+
+        var clientID = "ws" + Math.random();
+        //Create client instance
+        var client = new Paho.Client("m11.cloudmqtt.com", 30722, clientID);
+
+        //set callback handlers
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        // connect the client
+        client.connect({
+            useSSL: true,
+            userName: usuario,
+            password: contrasena,
+            onFailure: onFailure,
+        });
+
+    </script>
+</body>
+</html>
